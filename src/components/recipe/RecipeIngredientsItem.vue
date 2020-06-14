@@ -10,32 +10,56 @@
         d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
       />
     </svg>
-    <span class="nominal">4</span>
+    <span class="nominal">{{nominal}}</span>
     <span class="type"
-      >1/2 cup unbleached high-gluten, bread, or all-purpose flour, chilled
+      >{{ingObj.unit}}
     </span>
+    <span class="ingredient">{{ingObj.ingredient}}</span> 
   </li>
 </template>
 
 <script>
-export default {};
+import { eventBus } from './../../main.js';
+
+export default {
+  data() {
+    return {
+      nominal: this.ingObj.count
+    }
+  },
+  props: {
+    ingObj: Object,
+    index: Number
+  },
+  created() {
+    eventBus.$on('servingsAdded', () => {
+      this.nominal = this.$store.state.recipe.ingredients[this.index].count;
+    });
+
+    eventBus.$on('servingsSubtracted', () => {
+      this.nominal = this.$store.state.recipe.ingredients[this.index].count;
+    });
+  }
+};
 </script>
 
 <style scoped>
   .ingre-list-wrappper {
     display: grid;
-    grid-template-columns: auto auto auto;
-    gap: 0 0.5rem;
+    grid-template-columns: auto auto auto 1fr;
+    gap: 0 0.25rem;
   }
 
   .check-icon,
   .nominal,
-  .type {
+  .type,
+  .ingredient {
     display: block;
   }
 
   .nominal,
-  .type {
+  .type,
+  .ingredient {
     font-weight: 300;
     font-size: 0.9rem;
   }

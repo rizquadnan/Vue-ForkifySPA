@@ -1,5 +1,5 @@
 <template>
-  <div class="desc-wrapper">
+  <div class="desc-wrapper" :style="{ paddingTop: padding }">
     <div class="recipe-general">
       <div class="recipe-general__recipe-duration">
         <div class="recipe-general__recipe-duration__img">
@@ -11,7 +11,7 @@
           </svg>
         </div>
         <span class="recipe-general__recipe-duration__text"
-          ><span class="nominal">30</span> minutes</span
+          ><span class="nominal">{{ time }}</span> minutes</span
         >
       </div>
       <div class="recipe-general__recipe-portion">
@@ -24,10 +24,10 @@
           </svg>
         </div>
         <span class="recipe-general__recipe-portion__text"
-          ><span class="nominal">4</span> servings</span
+          ><span class="nominal">{{ servings }} </span>servings</span
         >
         <div class="recipe-general__recipe-portion__buttons">
-          <button class="add-btn">
+          <button class="add-btn" @click="addServings">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               height="24"
@@ -39,7 +39,7 @@
               />
             </svg>
           </button>
-          <button class="substract-btn">
+          <button class="substract-btn" @click="substractServings">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               height="24"
@@ -55,7 +55,7 @@
         </div>
       </div>
     </div>
-    <div class="recipe-like">
+    <div class="recipe-like empty" @click="ctrlLikeRecipe" v-if="!isLiked">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
         <path d="M0 0h24v24H0z" fill="none" />
         <path
@@ -63,11 +63,64 @@
         />
       </svg>
     </div>
+    <div class="recipe-like liked" @click="ctrlLikeRecipe" v-else>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M0 0h24v24H0z" fill="none" />
+        <path
+          d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+        />
+      </svg>
+    </div>
   </div>
 </template>
 
 <script>
-export default {};
+import { eventBus } from "./../../main.js";
+import { mapGetters } from "vuex";
+import { mapMutations } from "vuex";
+import { cLikeRecipe } from "./../mixins/changeLike.js" 
+
+export default {
+  mixins: [cLikeRecipe],
+  data() {
+    return {
+      servings: this.$store.state.recipe.servings,
+      time: this.$store.state.recipe.time,
+      isHuge: "",
+      isSmall: "",
+      padding: 0,
+      isLiked: false
+    };
+  },
+  computed: {
+    ...mapGetters(["recipeServings"])
+  },
+  methods: {
+    ...mapMutations(["updateServings"]),
+    addServings() {
+      this.updateServings("inc");
+      this.servings = this.$store.state.recipe.servings;
+      eventBus.$emit("servingsAdded");
+    },
+    substractServings() {
+      this.updateServings("dec");
+      this.servings = this.$store.state.recipe.servings;
+      eventBus.$emit("servingsSubtracted");
+    },
+    checkHeadline() {
+      eventBus.$on("headlineHeightChecked", topPadding => {
+        this.padding = topPadding;
+      });
+    },
+  },
+  created() {
+    // check headline element height to determine padding
+    this.checkHeadline();
+
+    // check whether recipe is liked or not
+    this.checkIsLiked();
+  }
+};
 </script>
 
 <style scoped>
@@ -75,7 +128,7 @@ export default {};
   display: flex;
   justify-content: space-between;
   margin: 0 auto;
-  padding: 65px 1.6rem 30px 2.5rem;
+  padding: 0 1.6rem 30px 2.5rem;
   background-color: #f9f5f3;
 }
 

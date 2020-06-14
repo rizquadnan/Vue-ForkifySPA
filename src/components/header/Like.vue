@@ -1,22 +1,34 @@
 <template>
-  <div class="like-wrapper">
-    <img class="likes__panel__img" src="../../assets/test-1.jpg" alt="" />
+  <div class="like-wrapper" @click="crtlGetRecipe">
+    <img class="likes__panel__img" :src="recipe.imgSource" :alt="recipe.title" />
     <div class="likes__panel__text">
-      <span class="likes__panel__title">Best pizza dough</span>
-      <span class="likes__panel__author">101 cookbooks</span>
+      <span class="likes__panel__title">{{recipe.title}}</span>
+      <span class="likes__panel__author">{{recipe.author}}</span>
     </div>
   </div>
 </template>
 
 <script>
-export default {};
+import { getRecipe } from './../mixins/getRecipe.js';
+
+export default {
+  data() {
+    return {
+      id: this.recipe.id
+    }
+  },
+  props: {
+    recipe: Object
+  },
+  mixins: [getRecipe]
+};
 </script>
 
 <style scoped>
   .like-wrapper {
     display: flex;
     border-bottom: 1px solid #f2efee;
-    padding: 1.5rem 2rem;
+    padding: 1.5rem;
     transition: background-color 350ms;
     z-index: 10;
   }

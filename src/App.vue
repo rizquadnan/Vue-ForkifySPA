@@ -3,9 +3,22 @@
     <div class="main-wrapper">
       <app-header id="app-header"></app-header>
       <div class="second-wrapper">
-        <app-search id="app-search"></app-search>
-        <app-recipe id="app-recipe"></app-recipe>
-        <shopping-list id="app-shop-list"></shopping-list>
+        <div class="app-search-wrapper" v-show="!mobileHideSearch">
+          <app-search
+            v-if="searchSuccess || isSearching"
+            id="app-search"
+          ></app-search>
+        </div>
+        <div class="app-recipe-wrapper" v-show="!mobileHideRecipe">
+          <app-recipe
+            v-if="recipeGetted || isGettingRecipe"
+            id="app-recipe"
+          ></app-recipe>
+        </div>
+        <shopping-list
+          v-if="isShoppingListed"
+          id="app-shop-list"
+        ></shopping-list>
       </div>
     </div>
   </div>
@@ -15,13 +28,34 @@
 import Header from "./components/header/Header.vue";
 import Search from "./components/search/Search.vue";
 import Recipe from "./components/recipe/Recipe.vue";
+import { mapGetters } from "vuex";
+import { eventBus } from "./main.js";
 
 export default {
   name: "app",
   data() {
-    return {
-      isSearched: false
-    };
+    return {};
+  },
+  computed: {
+    ...mapGetters([
+      "searchSuccess",
+      "isSearching",
+      "isGettingRecipe",
+      "recipeGetted",
+      "isShoppingListed",
+      "mobileHideSearch",
+      "mobileHideRecipe"
+    ]),
+    isEmpty() {
+      // return true if all other child element is non existent
+      return !(
+        this.searchSuccess ||
+        this.isSearching ||
+        this.isGettingRecipe ||
+        this.recipeGetted ||
+        this.isShoppingListed
+      );
+    }
   },
   components: {
     appHeader: Header,
@@ -37,34 +71,45 @@ export default {
 }
 
 #app-search,
-#app-recipe,
 #app-shop-list {
-  display: none;
+  /* display: none; */
   background-color: #fff;
 }
 
 @media screen and (min-width: 800px) {
   .second-wrapper {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: 1fr 2fr;
   }
 
-  #app-search,
+  /* #app-search,
   #app-recipe {
     display: block;
+  } */
+
+  #app-recipe {
+    grid-column: 2;
+  }
+
+  #app-search {
+    grid-column: 1;
   }
 }
 
 @media screen and (min-width: 1100px) {
   .second-wrapper {
-    grid-template-columns: auto 4fr 2fr;
+    grid-template-columns: 2fr 4fr 2fr;
+  }
+
+  #app-shop-list {
+    grid-column: 3;
   }
 
   /* adjust size on header elements*/
   #app-header .logo {
     width: 6rem;
   }
-  
+
   #app-header .search-nav__search-bar {
     padding: 0.7rem;
   }
@@ -75,25 +120,25 @@ export default {
 
   #app-header .search-nav__button::before {
     top: 51%;
-    transform: translate(-50%, -51%)
+    transform: translate(-50%, -51%);
   }
 
-  /* tweak likes panel position*/ 
+  /* tweak likes panel position*/
   #app-header .likes__panel {
     left: -180px;
   }
 
   /* remove shopping list icon on header */
-  #app-header {
+  /* #app-header {
     display: flex;
     justify-content: space-between;
-  }
+  } */
 
   #app-header .shop-list {
     display: none;
   }
 
-  #app-header .likes{
+  #app-header .likes {
     width: 2rem;
     height: 2rem;
   }
@@ -111,7 +156,6 @@ export default {
 
   /* tweak shop results */
   #app-shop-list {
-    display: block;
     padding: 1.8rem;
   }
 }
@@ -127,9 +171,13 @@ export default {
 
   .second-wrapper {
     background-color: #fff;
-    height: 100vh;
+    min-height: 100vh;
     border-radius: 0 0 0.5rem 0.5rem;
   }
+
+  /* .empty {
+    height: 100vh;
+  } */
 
   #app-header .search-nav__search-bar {
     width: 400px;

@@ -1,9 +1,9 @@
 <template>
   <div class="ingre-wrapper">
     <ul class="ingredients-list">
-      <ingredients-item v-for="item in 8" :key="item"></ingredients-item>
+      <ingredients-item v-for="(ingObj, index) in ingredients" :key="index" :ingObj="ingObj" :index="index"></ingredients-item>
     </ul>
-    <button class="add-ingredients-btn btn">
+    <button class="add-ingredients-btn btn" @click="addIngredients">
       <svg class="icon"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
@@ -13,16 +13,51 @@
           d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"
         />
       </svg>
-      <span class="content">Add To Shopping list</span>
+      <span class="content">Add to shopping list</span>
     </button>
   </div>
 </template>
 
 <script>
 import RecipeIngredientsItem from "./RecipeIngredientsItem.vue";
+import { eventBus } from './../../main.js';
+import Ingredients from './../../models/Ingredients.js';
+import { mapMutations, mapGetters } from 'vuex';
+
 export default {
+  props: {
+    ingredients: Array
+  },
   components: {
     ingredientsItem: RecipeIngredientsItem
+  },
+  computed: {
+    ...mapGetters([
+      'stateShopList',
+    ])
+  },
+  methods: {
+    ...mapMutations([
+      'createShopList',
+      'toggleShoppingListed'
+    ]),
+    addIngredients() {
+      // create ingredients model
+      this.createShopList(new Ingredients());
+
+      // add current selected recipe ingredients to the model
+      this.ingredients.forEach(el => {
+        this.stateShopList.addIngredient(el);
+      });
+
+      // send event to render model
+      if(screen.width >= 1100) {
+        this.toggleShoppingListed(true);
+        eventBus.$emit('ingredientsAddedDesktop');
+      } else {
+        eventBus.$emit('ingredientsAdded');
+      }
+    }
   }
 };
 </script>
@@ -47,7 +82,7 @@ export default {
   justify-content: space-between;
   background-color: #fb6736;
   border: none;
-  padding: 0.6rem;
+  padding: 0.6rem 0.7rem;
   border-radius: 30px;
   color: #f2efee;
   cursor: pointer;

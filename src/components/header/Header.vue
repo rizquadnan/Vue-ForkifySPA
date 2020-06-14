@@ -1,8 +1,16 @@
 <template>
   <div class="header-wrapper">
-    <img class="logo" src="../../assets/logo.png" alt="forkify logo" />
+    <a href="index.html"
+      ><img class="logo" src="../../assets/logo.png" alt="forkify logo"
+    /></a>
     <form class="search-nav">
-      <input class="search-nav__search-bar" type="text" id="search-bar" placeholder="Search food" v-model="searchQuery"/>
+      <input
+        class="search-nav__search-bar"
+        type="text"
+        id="search-bar"
+        placeholder="Search food"
+        v-model="searchQuery"
+      />
       <button class="search-nav__button" @click.prevent="ctrRequestQuery">
         <svg class="search-nav__button__icon" viewBox="0 0 20 20">
           <path
@@ -12,7 +20,7 @@
       </button>
     </form>
     <div class="user_menu">
-      <div class="likes">
+      <div class="likes" v-show="isLiked">
         <svg class="likes__icon" viewBox="0 0 20 20">
           <path
             d="M17.19 4.155c-1.672-1.534-4.383-1.534-6.055 0l-1.135 1.042-1.136-1.042c-1.672-1.534-4.382-1.534-6.054 0-1.881 1.727-1.881 4.52 0 6.246l7.19 6.599 7.19-6.599c1.88-1.726 1.88-4.52 0-6.246z"
@@ -20,8 +28,12 @@
         </svg>
         <div class="likes__panel">
           <ul class="likes__panel__likes-list">
-            <like-item class="likes__panel__likes-list__items"></like-item>
-            <like-item class="likes__panel__likes-list__items"></like-item>
+            <like-item
+              class="likes__panel__likes-list__items"
+              v-for="recipe in recipeList"
+              :recipe="recipe"
+              :key="recipe.id"
+            ></like-item>
           </ul>
         </div>
       </div>
@@ -44,23 +56,119 @@
 
 <script>
 import Like from "./Like.vue";
-import Query from "../../models/Query.js"
+import Query from "../../models/Query.js";
+import { mapMutations } from "vuex";
+import { eventBus } from "./../../main.js";
+import { mapGetters } from "vuex";
 
 export default {
   data() {
     return {
       searchQuery: "",
-    }
+      recipeList: [],
+      isLiked: false,
+    };
+  },
+  computed: {
+    ...mapGetters([
+      "recipeGetted",
+      "stateRecipe",
+      "stateLikes",
+      "stateRecipeLiked"
+    ])
   },
   methods: {
-    p () {
-      this.queryModel = new Query(this.searchQuery);
-      console.log(this.searchQuery);
-      console.log(this.queryModel);
+    ...mapMutations([
+      "toggleSpinner",
+      "toggleSearch",
+      "toggleRecipeGetted",
+      "toggleMobileHideSearch",
+      "toggleMobileHideRecipe",
+      "toggleStateRecipeLiked"
+    ]),
+    async ctrRequestQuery() {
+      // get query from view
+      this.$store.state.query = {};
+      this.$store.state.query = new Query(this.searchQuery);
+      // prepare UI for rendering request API
+      if (screen.width < 800 && this.recipeGetted === true) {
+        this.toggleMobileHideSearch(false);
+        this.toggleMobileHideRecipe(true);
+      }
+
+      this.searchQuery = "";
+      this.toggleSpinner({ type: "search", condition: true });
+      this.toggleSearch(false);
+      eventBus.$emit("newSearch");
+
+      try {
+        // request API with query and store request results in internal data structure
+        await this.$store.state.query.requestQuery();
+
+        // render results to UI
+        if (this.$store.state.query.results) {
+          this.toggleSpinner({ type: "search", condition: false });
+          this.toggleSearch(true);
+          eventBus.$emit("searchSuccess");
+        } else {
+          this.toggleSpinner({ type: "search", condition: false });
+          alert("Something went wrong. Please try to search a different queue");
+        }
+      } catch (error) {
+        this.toggleSpinner({ type: "search", condition: false });
+        alert("Something went wrong. Please try to search a different queue");
+      }
+    },
+    addRecipeToLikes() {
+      eventBus.$on("recipeLiked", () => {
+        // add current recipe if list likes is empty
+        if (this.stateLikes.likeList.length === 0) {
+          // show likes icon if first time added
+          this.isLiked = this.stateRecipeLiked;
+
+          this.stateLikes.likeList.push(this.stateRecipe);
+        } else {
+          // add current recipe if not found on likes
+          const idx = this.stateLikes.likeList.findIndex(
+            el => el.id === this.stateRecipe.id
+          );
+          if (idx === -1) {
+            this.stateLikes.likeList.push(this.stateRecipe);
+          }
+        }
+        // add state vuex likes to local component likes
+        this.recipeList = this.stateLikes.likeList;
+      });
+    },
+    dislikeRecipe() {
+      eventBus.$on("recipeDisliked", () => {
+        // delete item
+        const idx = this.stateLikes.likeList.findIndex(
+          el => el.id === this.stateRecipe.id
+        );
+        this.stateLikes.likeList.splice(idx, 1);
+
+        // render item in view
+        this.recipeList = this.stateLikes.likeList;
+
+        // remove like icon if there is no likes
+        if (this.recipeList.length === 0) {
+          this.toggleStateRecipeLiked(false);
+          this.isLiked = this.stateRecipeLiked;
+        }
+      });
     }
   },
   components: {
     likeItem: Like
+  },
+  created() {
+    // add current recipe to likes
+    this.addRecipeToLikes();
+  },
+  mounted() {
+    // dislike current recipe
+    this.dislikeRecipe();
   }
 };
 </script>
@@ -68,7 +176,7 @@ export default {
 <style scoped>
 .header-wrapper {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr 32px;
   background-color: #f9f5f3;
   padding: 1.2rem 2rem;
   border-radius: 0.5rem 0.5rem 0 0;
@@ -76,8 +184,13 @@ export default {
   align-items: center;
 }
 
+a {
+  display: flex;
+  align-items: center;
+}
+
 .logo {
-  width: 5.2rem;
+  height: 1.6rem;
 }
 
 /* search */
@@ -115,26 +228,30 @@ export default {
 }
 
 .search-nav__button:placeholder {
-  font-family: 'Nunito', Helvetica, Arial, sans-serif;
+  font-family: "Nunito", Helvetica, Arial, sans-serif;
 }
 
-::-webkit-input-placeholder { /* Chrome/Opera/Safari */
-  font-family: 'Nunito', Helvetica, Arial, sans-serif;
+::-webkit-input-placeholder {
+  /* Chrome/Opera/Safari */
+  font-family: "Nunito", Helvetica, Arial, sans-serif;
   font-size: 0.8rem;
   opacity: 0.2;
 }
-::-moz-placeholder { /* Firefox 19+ */
-  font-family: 'Nunito', Helvetica, Arial, sans-serif;
+::-moz-placeholder {
+  /* Firefox 19+ */
+  font-family: "Nunito", Helvetica, Arial, sans-serif;
   font-size: 0.8rem;
   opacity: 0.2;
 }
-:-ms-input-placeholder { /* IE 10+ */
-  font-family: 'Nunito', Helvetica, Arial, sans-serif;
+:-ms-input-placeholder {
+  /* IE 10+ */
+  font-family: "Nunito", Helvetica, Arial, sans-serif;
   font-size: 0.8rem;
   opacity: 0.2;
 }
-:-moz-placeholder { /* Firefox 18- */
-  font-family: 'Nunito', Helvetica, Arial, sans-serif;
+:-moz-placeholder {
+  /* Firefox 18- */
+  font-family: "Nunito", Helvetica, Arial, sans-serif;
   font-size: 0.8rem;
   opacity: 0.2;
 }
@@ -178,8 +295,8 @@ export default {
 
 .likes__panel {
   position: absolute;
-  top: -5px;
-  left: -140px;
+  top: 30px;
+  left: -190px;
   z-index: 10;
   background-color: #fff;
   box-shadow: 0 0.8rem 5rem 2rem rgba(101, 90, 86, 0.1);
@@ -210,10 +327,10 @@ export default {
 .shops-panel {
   position: absolute;
   z-index: 100;
-  top: -5px;
-  left: -280px;
+  top: 30px;
+  left: -385px;
   background-color: #fff;
-  width: 20rem;
+  width: 25rem;
   margin: 0 auto;
   padding: 1.5rem 2rem;
   box-shadow: 0 0.7rem 3rem rgba(101, 90, 86, 0.08);
@@ -253,6 +370,10 @@ export default {
 
   .search-nav__search-bar {
     width: 76%;
+  }
+
+  .search-nav:focus-within {
+    transform: none;
   }
 }
 </style>
