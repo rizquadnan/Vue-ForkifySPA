@@ -1,3 +1,3 @@
 module.exports = {
-  publicPath: '/ForkifySPA-VueJs/'
+  publicPath: '/Vue-ForkifySPA/'
 }
